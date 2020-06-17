@@ -22,17 +22,17 @@ class SudokuGame:
             #               [2, 9, 0, 0, 0, 0, 0, 0, 0]]
             self.board = SudokuGame.create_new_board()
             # #NP HARD INVALID BOARD
-            # self.board = \
-            #     [[0,0,7,0,4,0,0,0,0],
-            #      [0,0,0,0,0,8,0,0,6],
-            #      [0,4,1,0,0,0,9,0,0],
-            #      [0,0,0,0,0,0,1,7,0],
-            #      [0,0,0,0,0,6,0,0,0],
-            #      [0,0,8,7,0,0,2,0,0],
-            #      [3,0,0,0,0,0,0,0,0],
-            #      [0,0,0,1,2,0,0,0,0],
-            #      [8,6,0,0,7,6,0,0,5]
-            # ]
+            self.board = \
+                [[0,0,7,0,4,0,0,0,0],
+                 [0,0,0,0,0,8,0,0,6],
+                 [0,4,1,0,0,0,9,0,0],
+                 [0,0,0,0,0,0,1,7,0],
+                 [0,0,0,0,0,6,0,0,0],
+                 [0,0,8,7,0,0,2,0,0],
+                 [3,0,0,0,0,0,0,0,0],
+                 [0,0,0,1,2,0,0,0,0],
+                 [8,6,0,0,7,6,0,0,5]
+            ]
             # #EASY INVALID BOARD
             # self.board = [[1,2,3,4,5,6,7,8,9],
             #               [4,5,6,7,8,9,1,2,3],
@@ -131,6 +131,7 @@ class SudokuGame:
                     entry_constraint = list(range(1, 10))
                     [entry_constraint.remove(v) for v in row_values + col_values + boxed_values
                      if v in entry_constraint]
+                    # print("i: {}, j: {}, entry_constaint: {}".format(i, j, entry_constraint))
                     if len(entry_constraint) == 0:
                         self.needs_backtrack = True
                     self.constraints[i][j] = {'values': entry_constraint}
@@ -258,7 +259,7 @@ class SudokuGame:
         next_game_state = None
         while not next_game_state or next_game_state in self.game_states:
             try:
-                if not self.needs_backtrack:
+                if not self.needs_backtrack and len(self.constraints[i][j]['values']) > 0:
                     prospective_number = self.constraints[i][j]['values'].pop()
                     next_game_state = self.create_minimal_game_state(i, j, prospective_number)
                 else:

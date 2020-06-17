@@ -29,7 +29,7 @@ def draw_board():
             pygame.draw.rect(screen, [0, 0, 0], [50 * row, 50 * col, 50, 50])
             pygame.draw.rect(screen, [255, 255, 255], [50 * row + 1, 50 * col + 1, 48, 48])
 
-start = time.time()
+# start = time.time()
 game = SudokuGame.SudokuGame()
 screen.fill((255, 255, 255))
 draw_board()
@@ -56,8 +56,8 @@ while True:
                 elif game.board[c][r] != 0:
                     blit_game_piece((50 * r + 18, 50 * c + 10), str(game.board[c][r]))
         pygame.display.update()
-    end = time.time()
-    print("Solved in {} seconds".format(end - start))
+    # end = time.time()
+    # print("Solved in {} seconds".format(end - start))
     pygame.quit()
     for i in pygame.event.get():
         if i.type == pygame.QUIT:
