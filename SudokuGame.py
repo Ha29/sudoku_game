@@ -258,7 +258,7 @@ class SudokuGame:
         next_game_state = None
         while not next_game_state or next_game_state in self.game_states:
             try:
-                if len(self.constraints[i][j]['values']) > 0:
+                if not self.needs_backtrack:
                     prospective_number = self.constraints[i][j]['values'].pop()
                     next_game_state = self.create_minimal_game_state(i, j, prospective_number)
                 else:
@@ -266,6 +266,7 @@ class SudokuGame:
                     result = self.remove_game_piece(i, j)
                     if result == "Game is not solvable":
                         return False
+                    self.needs_backtrack = False
                     self.reconfigure_constraints()
                     return {'position': [i, j]}
             except NoValidPiece:
