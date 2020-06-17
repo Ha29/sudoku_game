@@ -202,11 +202,11 @@ class SudokuGame:
                 return None, None
             return [pos_i, pos_j]
         i, j = helper(i, j)
+        while i and j and self.given_pieces[i][j]:
+            i, j = helper(i, j)
         if not i and not j:
             self.game_over = True
             return None, None
-        while self.given_pieces[i][j]:
-            i, j = helper(i, j)
         return [i, j]
 
     def previous_piece(self, i, j):
