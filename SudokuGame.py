@@ -11,16 +11,16 @@ class NoValidPiece(Exception):
 class SudokuGame:
     def __init__(self, board=None):
         if not board:
-            self.board = [[0, 0, 0, 0, 0, 0, 0, 8, 4],
-                          [7, 2, 8, 9, 0, 0, 5, 1, 0],
-                          [0, 0, 0, 0, 8, 0, 2, 9, 0],
-                          [3, 0, 9, 7, 2, 0, 8, 0, 0],
-                          [0, 0, 2, 1, 0, 9, 7, 0, 0],
-                          [0, 0, 7, 0, 6, 8, 9, 0, 5],
-                          [0, 1, 3, 0, 5, 0, 0, 0, 0],
-                          [0, 7, 5, 0, 0, 1, 6, 3, 2],
-                          [2, 9, 0, 0, 0, 0, 0, 0, 0]]
-            # self.board = SudokuGame.create_new_board()
+            # self.board = [[0, 0, 0, 0, 0, 0, 0, 8, 4],
+            #               [7, 2, 8, 9, 0, 0, 5, 1, 0],
+            #               [0, 0, 0, 0, 8, 0, 2, 9, 0],
+            #               [3, 0, 9, 7, 2, 0, 8, 0, 0],
+            #               [0, 0, 2, 1, 0, 9, 7, 0, 0],
+            #               [0, 0, 7, 0, 6, 8, 9, 0, 5],
+            #               [0, 1, 3, 0, 5, 0, 0, 0, 0],
+            #               [0, 7, 5, 0, 0, 1, 6, 3, 2],
+            #               [2, 9, 0, 0, 0, 0, 0, 0, 0]]
+            self.board = SudokuGame.create_new_board()
             # #NP HARD INVALID BOARD
             # self.board = \
             #     [[0,0,7,0,4,0,0,0,0],
@@ -117,6 +117,7 @@ class SudokuGame:
         """
         # compute the columns once so that they can be accessed multiple times
         cols = []
+        no_values_left = True
         for j in range(0, 9):
             cols.append([self.board[row][j] for row in range(0, 9)])
         for i in range(0, 9):
@@ -129,6 +130,7 @@ class SudokuGame:
                 if self.board[i][j] != 0:
                     self.constraints[i][j] = {'value': self.board[i][j]}
                 else:
+                    no_values_left = False
                     entry_constraint = list(range(1, 10))
                     [entry_constraint.remove(v) for v in row_values + col_values + boxed_values
                      if v in entry_constraint]
@@ -136,6 +138,7 @@ class SudokuGame:
                     if len(entry_constraint) == 0:
                         self.needs_backtrack = True
                     self.constraints[i][j] = {'values': entry_constraint}
+        self.game_over = no_values_left
 
     def check_game_over(self):
         """
@@ -174,9 +177,16 @@ class SudokuGame:
         hash_func.update(bytes(str(new_board), encoding='utf8'))
         return hash_func.hexdigest()
 
+    def hash_board_with_piece(self, i, j, piece):
+        potential_board = copy.deepcopy(self.board)
+        potential_board[i][j] = piece
+        hash_func = hashlib.sha256()
+        hash_func.update(bytes(str(potential_board), encoding='utf8'))
+        return hash_func.hexdigest()
+
     def hash_board(self):
         hash_func = hashlib.sha256()
-        hash_func.update(bytes(str(self.board)), encoding='utf8')
+        hash_func.update(bytes(str(self.board), encoding='utf8'))
         return hash_func.hexdigest()
 
     def remove_constraints(self, i, j, value):
@@ -295,12 +305,10 @@ class SudokuGame:
         while (index_i == -1 and index_j == -1):
             for i, r in enumerate(self.constraints):
                 for j, constraint in enumerate(r):
-                    if index_i == -1 and index_j == -1 and 'values' in constraint:
+                    if index_i == -1 and index_j == -1 and 'values' in constraint and len(constraint['values']) != 0:
                         index_i, index_j = i, j
                         min_constraint = constraint
-                    elif 'values' in constraint:
-                        if len(constraint) == 0:
-                            return -1, -1
+                    elif 'values' in constraint and len(constraint['values']) != 0:
                         if len(constraint['values']) < len(min_constraint['values']):
                             index_i, index_j = i, j
                             min_constraint = constraint
@@ -309,7 +317,15 @@ class SudokuGame:
             else:
                 # instead of returning, check if i, j popped produce novel board
                 # if yes, then return it, if not then repeat the process
-                return index_i, index_j
+                piece = self.constraints[index_i][index_j]['values'].pop()
+                new_board_state = self.hash_board_with_piece(index_i, index_j, piece)
+                if new_board_state in self.game_states:
+                    index_i, index_j = -1, -1
+                else:
+                    self.board[index_i][index_j] = piece
+                    self.game_states.add(new_board_state)
+                    self.reconfigure_constraints()
+                    return index_i, index_j
 
 
     def solve(self, print_board=False):
@@ -367,22 +383,25 @@ class SudokuGame:
         prioritizing positions that have the least amount of possible pieces.
         :return:
         """
-        while not self.check_game_over() and not self.game_over:
+        while not self.game_over:
             pos_i, pos_j = self.find_min_piece()
             if pos_i == -1 and pos_j == -1:
                 if len(self.visited_indices) == 0:
-                    return "Game is not solvable"
-                else:
-                    invalid_i, invalid_j = self.visited_indices.pop()
-                    self.remove_game_piece(invalid_i, invalid_j)
                     self.reconfigure_constraints()
-                    return self.board
-            else:
-                self.board[pos_i][pos_j] = self.constraints[pos_i][pos_j]['values'].pop()
+                    pos_i, pos_j = self.find_min_piece()
+                    if pos_i == -1 and pos_j == -1:      
+                        print("no more positions to backtrack")
+                        self.game_over = True
+                        return "Game is not solvable"
+                invalid_i, invalid_j = self.visited_indices.pop()
+                self.board[invalid_i][invalid_j] = 0
                 self.reconfigure_constraints()
-                self.visited_indices.append([pos_i, pos_j])
-                self.game_states.add(self.hash_board())
                 return self.board
+            else:
+                self.visited_indices.append([pos_i, pos_j])
+                return self.board
+
+
 
 
 
